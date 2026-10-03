@@ -1,6 +1,6 @@
 // src/screens/ChatScreen.js
 // Faculty Connect: 1-on-1 WhatsApp-Style Academic Chat with Faculty List & Read/Seen Flags
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,9 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  KeyboardAvoidingView,
+  Keyboard,
   Platform,
+  LayoutAnimation,
 } from 'react-native';
 import { FACULTY_LIST } from '../data/mockData';
 import EmptyState from '../components/EmptyState';
@@ -26,6 +27,42 @@ export default function ChatScreen({
   const [selectedContact, setSelectedContact] = useState(null);
   const [inputText, setInputText] = useState('');
   const [errorNotice, setErrorNotice] = useState('');
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollViewRef = useRef(null);
+
+  // Exact Keyboard height listener for iOS & Android
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      if (Platform.OS === 'ios') {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      }
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      if (Platform.OS === 'ios') {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      }
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  // Auto-scroll when keyboard opens or contact is changed
+  useEffect(() => {
+    if (selectedContact && keyboardHeight > 0) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 60);
+    }
+  }, [keyboardHeight, selectedContact]);
 
   const isTeacher = userRole === 'teacher';
 
@@ -64,6 +101,9 @@ export default function ChatScreen({
 
     onSendMessage(newMsg);
     setInputText('');
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 50);
   };
 
   // ================= VIEW A: 1-ON-1 CONVERSATION SCREEN =================
@@ -77,10 +117,11 @@ export default function ChatScreen({
     );
 
     return (
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      <View
+        style={[
+          styles.container,
+          Platform.OS === 'ios' && { paddingBottom: keyboardHeight },
+        ]}
       >
         {/* Chat Header with Back Button */}
         <View style={styles.chatHeader}>
@@ -103,9 +144,13 @@ export default function ChatScreen({
 
         {/* Message Feed */}
         <ScrollView
+          ref={scrollViewRef}
           style={styles.chatFeed}
           contentContainerStyle={styles.chatContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: false })}
         >
           {conversationMessages.length > 0 ? (
             conversationMessages.map((msg) => {
@@ -156,7 +201,12 @@ export default function ChatScreen({
         )}
 
         {/* Input Bar */}
-        <View style={styles.inputContainer}>
+        <View
+          style={[
+            styles.inputContainer,
+            keyboardHeight === 0 && Platform.OS === 'ios' && styles.inputContainerHomeBar,
+          ]}
+        >
           <TextInput
             style={styles.textInput}
             placeholder={
@@ -175,7 +225,7 @@ export default function ChatScreen({
             <Text style={styles.sendButtonText}>Send</Text>
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     );
   }
 
@@ -589,6 +639,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  inputContainerHomeBar: {
+    paddingBottom: 22, // Comfort padding for iPhone home indicator bar when keyboard is down
   },
   textInput: {
     flex: 1,

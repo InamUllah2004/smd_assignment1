@@ -1,7 +1,7 @@
 // src/screens/AddSlotScreen.js
 // Interactive form with validation and room/time clash detection
 // Fulfills Core Requirement G: Form/Input with validation and meaningful feedback
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
+  Keyboard,
+  Platform,
   Alert,
 } from 'react-native';
 import { DEPARTMENTS } from '../data/mockData';
@@ -88,6 +90,27 @@ export default function AddSlotScreen({ timetable, onAddClass, onNavigate }) {
   // Feedback State
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollRef = useRef(null);
+
+  // Exact keyboard height listener for mobile devices
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const handleSave = () => {
     setErrorMessage('');
@@ -180,7 +203,17 @@ export default function AddSlotScreen({ timetable, onAddClass, onNavigate }) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      ref={scrollRef}
+      style={styles.container}
+      contentContainerStyle={[
+        styles.contentContainer,
+        keyboardHeight > 0 && { paddingBottom: keyboardHeight + 120 },
+      ]}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+    >
       
       {/* Intro Note */}
       <View style={styles.infoCard}>
@@ -271,6 +304,11 @@ export default function AddSlotScreen({ timetable, onAddClass, onNavigate }) {
             placeholderTextColor="#94a3b8"
             value={timeLabel}
             onChangeText={setTimeLabel}
+            onFocus={() => {
+              setTimeout(() => {
+                scrollRef.current?.scrollTo({ y: 220, animated: true });
+              }, 120);
+            }}
           />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 6 }}>
             <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -299,6 +337,11 @@ export default function AddSlotScreen({ timetable, onAddClass, onNavigate }) {
             placeholderTextColor="#94a3b8"
             value={instructor}
             onChangeText={setInstructor}
+            onFocus={() => {
+              setTimeout(() => {
+                scrollRef.current?.scrollToEnd({ animated: true });
+              }, 120);
+            }}
           />
         </View>
 
