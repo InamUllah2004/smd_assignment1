@@ -1,9 +1,11 @@
 // src/screens/AnalyticsScreen.js
 // Academic & Attendance Dashboard using react-native-chart-kit
 // Fulfills Requirement 7: Dashboard with at least two different chart types (BarChart & ProgressChart)
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import React, { useLayoutEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Alert } from 'react-native';
 import { BarChart, ProgressChart } from 'react-native-chart-kit';
+import { Ionicons } from '@expo/vector-icons';
+import { useApp } from '../context/AppContext';
 
 const screenWidth = Dimensions.get('window').width - 32;
 
@@ -43,7 +45,7 @@ function calculateClassDurationHours(timeLabel) {
     if (!startHourMatch) return 0;
     const startHour = parseInt(startHourMatch[1], 10);
     const inferred = (endModifier === 'PM' && startHour >= 8 && startHour <= 11) ? 'AM' : endModifier;
-    startFull = `${startPart} ${inferred}`;
+    startFull = `${startPart} ${endModifier}`;
   }
 
   const startMin = parseTimeToMinutes(startFull);
@@ -53,9 +55,40 @@ function calculateClassDurationHours(timeLabel) {
   return (endMin - startMin) / 60;
 }
 
-export default function AnalyticsScreen({ userRole = 'student', student, teacher, timetable }) {
+export default function AnalyticsScreen({ navigation }) {
+  const { userRole, student, teacher, timetable } = useApp();
   const isTeacher = userRole === 'teacher';
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: isTeacher ? 'Teaching Analytics' : 'Academic Analytics',
+      headerLeft: () => (
+        <TouchableOpacity
+          style={{ padding: 6, marginLeft: 6 }}
+          onPress={() => navigation.openDrawer && navigation.openDrawer()}
+          accessibilityLabel="Open Navigation Drawer"
+        >
+          <Ionicons name="menu" size={24} color="#ffffff" />
+        </TouchableOpacity>
+      ),
+      headerRight: () => (
+        <TouchableOpacity
+          style={{ padding: 6, marginRight: 6 }}
+          onPress={() => {
+            Alert.alert(
+              'FAST Debar Advisory',
+              'Official University Attendance Regulation:\n\n• Minimum 80% attendance is mandatory.\n• Warning issued for subjects < 80%.\n• Tap any subject below to inspect metrics with route parameters.',
+              [{ text: 'Understood' }]
+            );
+          }}
+          accessibilityLabel="Debar Advisory Alert"
+        >
+          <Ionicons name="alert-circle-outline" size={24} color="#ffffff" />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, isTeacher]);
 
   // 1. Calculate Exact Daily Hours from displayed class intervals:
   // If Teacher -> exact teaching hours per day for Dr. Farhan Ali
@@ -283,11 +316,19 @@ export default function AnalyticsScreen({ userRole = 'student', student, teacher
           registeredCourses.map((c) => {
             const isAtRisk = c.attendance < c.threshold;
             return (
-              <View key={c.code} style={styles.tableRow}>
+              <TouchableOpacity
+                key={c.code}
+                style={styles.tableRow}
+                onPress={() => {
+                  // Pass course data using route parameters!
+                  navigation.navigate('CourseDetail', { course: c });
+                }}
+                activeOpacity={0.7}
+              >
                 <View style={styles.tableCourseInfo}>
                   <Text style={styles.tableCourseName}>{c.name}</Text>
                   <Text style={styles.tableCourseCode}>
-                    {c.code} • {c.creditHours} CH • {c.attendedLectures}/{c.heldLectures} Lectures Held
+                    {c.code} • {c.creditHours} CH • Tap for Simulation & Metrics →
                   </Text>
                 </View>
                 <View style={styles.tablePercentage}>
@@ -296,7 +337,7 @@ export default function AnalyticsScreen({ userRole = 'student', student, teacher
                   </Text>
                   <Text style={styles.thresholdText}>Min {c.threshold}%</Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           })
         )}

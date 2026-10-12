@@ -1,7 +1,7 @@
 // src/screens/AddSlotScreen.js
 // Interactive form with validation and room/time clash detection
 // Fulfills Core Requirement G: Form/Input with validation and meaningful feedback
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,9 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { DEPARTMENTS } from '../data/mockData';
+import { useApp } from '../context/AppContext';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const TYPES = ['Theory', 'Lab'];
@@ -76,7 +78,9 @@ function parseSlotInterval(slotStr) {
   return { startMin, endMin };
 }
 
-export default function AddSlotScreen({ timetable, onAddClass, onNavigate }) {
+export default function AddSlotScreen({ navigation }) {
+  const { timetable, handleAddClass } = useApp();
+  const onAddClass = handleAddClass;
   // Form State
   const [course, setCourse] = useState('');
   const [code, setCode] = useState('');
@@ -111,6 +115,30 @@ export default function AddSlotScreen({ timetable, onAddClass, onNavigate }) {
       hideSub.remove();
     };
   }, []);
+
+  // Header options & Reset action button
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: 'Add Class Slot',
+      headerRight: () => (
+        <TouchableOpacity
+          style={{ padding: 6, marginRight: 4 }}
+          onPress={() => {
+            setCourse('');
+            setCode('');
+            setRoom('');
+            setInstructor('');
+            setErrorMessage('');
+            setSuccessMessage('');
+            Alert.alert('Form Reset', 'All input fields cleared.');
+          }}
+          accessibilityLabel="Reset Form Fields"
+        >
+          <Ionicons name="refresh-outline" size={22} color="#ffffff" />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
 
   const handleSave = () => {
     setErrorMessage('');
@@ -196,10 +224,12 @@ export default function AddSlotScreen({ timetable, onAddClass, onNavigate }) {
     setRoom('');
     setInstructor('');
 
-    // Switch view back to schedule after a moment
+    // Return to previous screen after brief confirmation
     setTimeout(() => {
-      onNavigate('mySchedule');
-    }, 1200);
+      if (navigation && navigation.goBack) {
+        navigation.goBack();
+      }
+    }, 1000);
   };
 
   return (

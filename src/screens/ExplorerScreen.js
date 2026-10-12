@@ -1,17 +1,51 @@
 // src/screens/ExplorerScreen.js
 // Allows students to explore timetables across all 5 university departments (CS, SE, AI, DS, CYS)
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import React, { useState, useLayoutEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { DEPARTMENTS } from '../data/mockData';
 import ClassCard from '../components/ClassCard';
 import EmptyState from '../components/EmptyState';
+import { useApp } from '../context/AppContext';
 
 const DAYS = ['All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
-export default function ExplorerScreen({ timetable }) {
+export default function ExplorerScreen({ navigation }) {
+  const { timetable } = useApp();
   const [selectedDept, setSelectedDept] = useState('CS');
   const [selectedDay, setSelectedDay] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Customize header title & meaningful header buttons
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: 'Campus Explorer',
+      headerLeft: () => (
+        <TouchableOpacity
+          style={styles.headerDrawerBtn}
+          onPress={() => navigation.openDrawer && navigation.openDrawer()}
+          accessibilityLabel="Open Navigation Drawer"
+        >
+          <Ionicons name="menu" size={24} color="#ffffff" />
+        </TouchableOpacity>
+      ),
+      headerRight: () => (
+        <TouchableOpacity
+          style={styles.headerResetBtn}
+          onPress={() => {
+            setSelectedDept('CS');
+            setSelectedDay('All');
+            setSearchQuery('');
+            Alert.alert('Filters Reset', 'Reset filters to Computer Science (All Days).');
+          }}
+          accessibilityLabel="Reset Department Filters"
+        >
+          <Ionicons name="refresh-outline" size={20} color="#ffffff" />
+          <Text style={styles.headerResetText}>Reset</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
 
   // Filter timetable according to selected department, day, and search query
   const filteredClasses = timetable.filter((item) => {
@@ -74,28 +108,33 @@ export default function ExplorerScreen({ timetable }) {
       </View>
 
       {/* Search Input */}
-      <View style={styles.filterSection}>
-        <Text style={styles.sectionHeading}>3. Search Classes, Rooms or Teachers</Text>
-        <View style={styles.searchBox}>
+      <View style={styles.searchSection}>
+        <Text style={styles.sectionHeading}>3. Real-time Search</Text>
+        <View style={styles.searchInputContainer}>
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by instructor, course, or room (e.g. Lab 2)..."
+            placeholder="Search by subject, teacher, room, or code..."
             placeholderTextColor="#94a3b8"
             value={searchQuery}
             onChangeText={setSearchQuery}
             clearButtonMode="while-editing"
           />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Text style={styles.clearBtn}>✕</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
       {/* Results Header */}
       <View style={styles.resultsHeader}>
         <Text style={styles.resultsTitle}>
-          Showing {filteredClasses.length} {filteredClasses.length === 1 ? 'Class' : 'Classes'}
+          Department {selectedDept} Classes ({filteredClasses.length})
         </Text>
-        <Text style={styles.deptIndicator}>
-          Dept: <Text style={styles.deptHighlight}>{selectedDept}</Text>
+        <Text style={styles.resultsSubtitle}>
+          Tap any card to view detailed parameters
         </Text>
       </View>
 
@@ -106,6 +145,10 @@ export default function ExplorerScreen({ timetable }) {
             key={cls.id}
             item={cls}
             showDay={selectedDay === 'All'}
+            onPress={(item) => {
+              // Pass route parameters to ClassDetailScreen!
+              navigation.navigate('ClassDetail', { classItem: item });
+            }}
           />
         ))
       ) : (
@@ -128,6 +171,25 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 40,
   },
+  headerDrawerBtn: {
+    padding: 6,
+    marginLeft: 6,
+  },
+  headerResetBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginRight: 6,
+    gap: 4,
+  },
+  headerResetText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
   filterSection: {
     marginBottom: 14,
   },
@@ -145,16 +207,17 @@ const styles = StyleSheet.create({
   },
   deptPill: {
     flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 10,
     backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 10,
-    paddingVertical: 8,
+    borderColor: '#e2e8f0',
     alignItems: 'center',
   },
   deptPillActive: {
-    backgroundColor: '#0f172a',
-    borderColor: '#0f172a',
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
   },
   deptPillText: {
     fontSize: 13,
@@ -162,78 +225,80 @@ const styles = StyleSheet.create({
     color: '#1e293b',
   },
   deptPillTextActive: {
-    color: '#38bdf8',
+    color: '#ffffff',
   },
   deptSubText: {
     fontSize: 9,
     color: '#64748b',
-    marginTop: 1,
+    marginTop: 2,
   },
   deptSubTextActive: {
-    color: '#94a3b8',
+    color: '#bfdbfe',
   },
   dayPills: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 8,
   },
   dayPill: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
     backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#cbd5e1',
+    borderColor: '#e2e8f0',
   },
   dayPillActive: {
-    backgroundColor: '#2563eb',
-    borderColor: '#2563eb',
+    backgroundColor: '#0f172a',
+    borderColor: '#0f172a',
   },
   dayPillText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#475569',
+    color: '#64748b',
   },
   dayPillTextActive: {
     color: '#ffffff',
-    fontWeight: 'bold',
   },
-  searchBox: {
+  searchSection: {
+    marginBottom: 14,
+  },
+  searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ffffff',
-    borderRadius: 10,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#cbd5e1',
-    paddingHorizontal: 10,
+    borderColor: '#e2e8f0',
   },
   searchIcon: {
     fontSize: 14,
-    marginRight: 6,
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    height: 40,
-    fontSize: 13,
+    fontSize: 14,
     color: '#0f172a',
   },
+  clearBtn: {
+    fontSize: 14,
+    color: '#94a3b8',
+    paddingHorizontal: 6,
+  },
   resultsHeader: {
+    marginBottom: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 10,
-    paddingHorizontal: 2,
+    alignItems: 'baseline',
   },
   resultsTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#334155',
-  },
-  deptIndicator: {
-    fontSize: 12,
-    color: '#64748b',
-  },
-  deptHighlight: {
+    fontSize: 14,
     fontWeight: 'bold',
-    color: '#2563eb',
+    color: '#0f172a',
+  },
+  resultsSubtitle: {
+    fontSize: 11,
+    color: '#64748b',
   },
 });

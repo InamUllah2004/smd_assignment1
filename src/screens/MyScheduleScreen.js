@@ -1,22 +1,52 @@
 // src/screens/MyScheduleScreen.js
 // Displays the student's personal timetable OR faculty teaching schedule based on active persona
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import ClassCard from '../components/ClassCard';
 import EmptyState from '../components/EmptyState';
+import { useApp } from '../context/AppContext';
 
 const DAYS = ['All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
-export default function MyScheduleScreen({
-  userRole = 'student',
-  student,
-  teacher,
-  timetable,
-  attendanceRecord,
-  onSetAttendance,
-}) {
+export default function MyScheduleScreen({ navigation }) {
+  const {
+    userRole,
+    student,
+    teacher,
+    timetable,
+    attendanceRecord,
+    handleSetAttendance,
+  } = useApp();
+
   const [selectedDay, setSelectedDay] = useState('All');
   const isTeacher = userRole === 'teacher';
+
+  // Customize header title and add meaningful header buttons
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: isTeacher ? 'Faculty Schedule' : 'My Schedule (BCS-5B)',
+      headerLeft: () => (
+        <TouchableOpacity
+          style={styles.headerDrawerBtn}
+          onPress={() => navigation.openDrawer && navigation.openDrawer()}
+          accessibilityLabel="Open Navigation Drawer"
+        >
+          <Ionicons name="menu" size={24} color="#ffffff" />
+        </TouchableOpacity>
+      ),
+      headerRight: () => (
+        <TouchableOpacity
+          style={styles.headerAddBtn}
+          onPress={() => navigation.navigate('AddSlot')}
+          accessibilityLabel="Add New Slot"
+        >
+          <Ionicons name="add" size={18} color="#ffffff" />
+          <Text style={styles.headerAddBtnText}>Add Slot</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, isTeacher]);
 
   // Filter classes:
   // If Teacher -> classes taught by Dr. Farhan Ali
@@ -84,6 +114,14 @@ export default function MyScheduleScreen({
         </View>
       )}
 
+      {/* Route Navigation Hint */}
+      <View style={styles.routeTip}>
+        <Ionicons name="information-circle" size={16} color="#2563eb" />
+        <Text style={styles.routeTipText}>
+          Tap any card below to navigate to <Text style={{ fontWeight: 'bold' }}>ClassDetailScreen</Text> via route parameters!
+        </Text>
+      </View>
+
       {/* Classes List */}
       {myClasses.length > 0 ? (
         myClasses.map((cls) => (
@@ -91,8 +129,12 @@ export default function MyScheduleScreen({
             key={cls.id}
             item={cls}
             showDay={selectedDay === 'All'}
-            onSetAttendance={!isTeacher ? onSetAttendance : null}
+            onSetAttendance={!isTeacher ? handleSetAttendance : null}
             attendanceStatus={attendanceRecord[cls.id] || 'pending'}
+            onPress={(item) => {
+              // Requirement 1: Pass data using route parameters!
+              navigation.navigate('ClassDetail', { classItem: item });
+            }}
           />
         ))
       ) : (
@@ -119,6 +161,39 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 40,
   },
+  headerDrawerBtn: {
+    padding: 6,
+    marginLeft: 6,
+  },
+  headerAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    marginRight: 6,
+    gap: 4,
+  },
+  headerAddBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  routeTip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eff6ff',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 12,
+    gap: 6,
+  },
+  routeTipText: {
+    fontSize: 12,
+    color: '#1e40af',
+    flex: 1,
+  },
   daySelectorContainer: {
     marginBottom: 14,
   },
@@ -135,40 +210,39 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dayPill: {
-    paddingVertical: 7,
     paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: 8,
+    borderRadius: 20,
     backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#cbd5e1',
+    borderColor: '#e2e8f0',
   },
   dayPillActive: {
-    backgroundColor: '#2563eb',
-    borderColor: '#2563eb',
+    backgroundColor: '#0f172a',
+    borderColor: '#0f172a',
   },
   dayPillText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#475569',
+    color: '#64748b',
   },
   dayPillTextActive: {
     color: '#ffffff',
-    fontWeight: 'bold',
   },
   summaryBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: '#ffffff',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 14,
-    marginBottom: 12,
+    marginBottom: 14,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
   summaryBannerFaculty: {
     borderLeftWidth: 4,
-    borderLeftColor: '#f59e0b',
+    borderLeftColor: '#059669',
   },
   bannerTitle: {
     fontSize: 16,
@@ -176,7 +250,7 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   bannerSubtitle: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#64748b',
     marginTop: 2,
   },
@@ -186,49 +260,45 @@ const styles = StyleSheet.create({
   },
   boldTextFaculty: {
     fontWeight: 'bold',
-    color: '#d97706',
+    color: '#059669',
   },
   countBadge: {
-    backgroundColor: '#eff6ff',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
   },
   countBadgeFaculty: {
-    backgroundColor: '#fef3c7',
-    borderColor: '#fde68a',
+    backgroundColor: '#ecfdf5',
   },
   countNumber: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#1d4ed8',
+    color: '#2563eb',
   },
   countNumberFaculty: {
-    color: '#b45309',
+    color: '#059669',
   },
   countLabel: {
-    fontSize: 9,
-    fontWeight: '600',
-    color: '#3b82f6',
-    textTransform: 'uppercase',
+    fontSize: 11,
+    color: '#64748b',
   },
   countLabelFaculty: {
-    color: '#d97706',
+    color: '#059669',
   },
   facultyNotice: {
-    backgroundColor: '#fffbeb',
+    backgroundColor: '#ecfdf5',
+    borderLeftWidth: 4,
+    borderLeftColor: '#10b981',
     borderRadius: 8,
     padding: 10,
     marginBottom: 14,
-    borderWidth: 1,
-    borderColor: '#fef3c7',
   },
   facultyNoticeText: {
-    fontSize: 11,
-    color: '#92400e',
+    fontSize: 12,
+    color: '#065f46',
     fontWeight: '500',
+    lineHeight: 18,
   },
 });

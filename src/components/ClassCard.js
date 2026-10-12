@@ -3,7 +3,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
-export default function ClassCard({ item, showDay = true, onSetAttendance, attendanceStatus = 'pending' }) {
+export default function ClassCard({ item, showDay = true, onSetAttendance, attendanceStatus = 'pending', onPress }) {
   const isLab = item.type === 'Lab';
   const isPresent = attendanceStatus === 'present';
   const isAbsent = attendanceStatus === 'absent';
@@ -11,6 +11,10 @@ export default function ClassCard({ item, showDay = true, onSetAttendance, atten
 
   return (
     <View style={[styles.card, isLab && styles.labCard]}>
+      <TouchableOpacity
+        activeOpacity={onPress ? 0.7 : 1}
+        onPress={() => onPress && onPress(item)}
+      >
       {/* Top Row: Time & Type Badge */}
       <View style={styles.topRow}>
         <View style={styles.timeTag}>
@@ -39,6 +43,13 @@ export default function ClassCard({ item, showDay = true, onSetAttendance, atten
           <Text style={styles.roomText}>📍 Room {item.room}</Text>
         </View>
       </View>
+
+      {onPress && (
+        <View style={styles.detailsPrompt}>
+          <Text style={styles.detailsPromptText}>View Full Details & Screen Route →</Text>
+        </View>
+      )}
+      </TouchableOpacity>
 
       {/* Interactive 3-State Attendance Marker */}
       {onSetAttendance && (
@@ -248,5 +259,17 @@ const styles = StyleSheet.create({
   btnTextActive: {
     color: '#ffffff',
     fontWeight: 'bold',
+  },
+  detailsPrompt: {
+    marginTop: 8,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    alignItems: 'flex-end',
+  },
+  detailsPromptText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#2563eb',
   },
 });
